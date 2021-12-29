@@ -1,13 +1,14 @@
-all: build zip
+
+BIN=upc_keys
+
+all: build
 
 build:
-	gcc -O3 -o upc_keys upc_keys.c -lcrypto
+	gcc -O3 -o $(BIN) upc_keys.c -lcrypto
 
-zip:
-	chmod 0755 index.js
-	chmod 0755 upc_keys
-	zip upc_keys.zip index.js upc_keys
-	@echo Now upload upc_keys.zip to AWS Lambda
+# prefixes according to https://upcwifikeys.com/UPC1234567
+run:
+	./$(BIN) $(ESSID) SAAP,SAPP,SBAP,UAAP
 
 clean:
-	rm upc_keys.zip upc_keys || true
+	rm $(BIN) || true
