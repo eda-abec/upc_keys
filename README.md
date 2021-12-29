@@ -3,6 +3,8 @@
 
 This is Peter "blasty" Geissler's [original upc_keys.c](https://haxx.in/upc_keys.c), modified to support custom prefixes. The output is also more machine-readable.
 
+Explanation of the process is in [code](upc_keys.c#L15).
+
 ## Building
 ```
 make build
