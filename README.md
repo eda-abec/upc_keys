@@ -1,16 +1,26 @@
-# upc_keys.c with custom prefix support and Lambda sauce
+# upc_keys.c
+## With custom prefix support and some enhancements
 
-This is Peter "blasty" Geissler's [original upc_keys.c](https://haxx.in/upc_keys.c), modified to support custom prefixes. The output is also more machine-readable. This is what powers my [passphrase recovery tool for `UPC1234567` devices](https://upc.michalspacek.cz/).
+This is Peter "blasty" Geissler's [original upc_keys.c](https://haxx.in/upc_keys.c), modified to support custom prefixes. The output is also more machine-readable.
 
-I run this code in [AWS Lambda](https://aws.amazon.com/lambda/), so I've included a [short howto](apigw.md) for setting it up, Node.js [wrapper](index.js), and [Makefile](Makefile) to make a .zip file to upload to Lambda.
+## Building
+```
+make build
+```
+or
+```
+gcc -O3 -o upc_keys upc_keys.c -lcrypto
+```
 
-## Building it
-`make build` or `gcc -O3 -o upc_keys upc_keys.c -lcrypto`
+## Running
+```
+./upc_keys [-p] [-2|-5] ESSID PREFIXES
+```
 
-## Using it
-`upc_keys <ESSID> <PREFIXES>`
-
-Where:
-
-- `<ESSID>` should be in `UPCxxxxxxx` format
-- `<PREFIXES>` should be a string of comma separated serial number prefixes
+From help:
+```
+ ESSID should be in 'UPCxxxxxxx' format (7 digits)
+ PREFIXES should be a string of comma separated serial number prefixes
+ -p - print passwords only, not serial numbers nor frequencies
+ -2, -5 - print only candidates on 2.4 GHz or 5 GHz, respectively
+```
