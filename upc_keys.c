@@ -115,9 +115,9 @@ uint32_t upc_generate_ssid(uint32_t* data, uint32_t magic)
 
 void usage(char *prog)
 {
-	fprintf(stderr, "  Usage: %s <ESSID> <PREFIXES>\n", prog);
-	fprintf(stderr, "   - ESSID should be in 'UPCxxxxxxx' format\n");
-	fprintf(stderr, "   - PREFIXES should be a string of comma separated serial number prefixes\n\n");
+	fprintf(stderr, "Usage: %s ESSID PREFIXES\n", prog);
+	fprintf(stderr, " - ESSID should be in 'UPCxxxxxxx' format\n");
+	fprintf(stderr, " - PREFIXES should be a string of comma separated serial number prefixes\n");
 }
 
 int main(int argc, char *argv[])
