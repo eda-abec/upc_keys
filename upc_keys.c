@@ -61,6 +61,9 @@
 #include <stdint.h>
 #include <openssl/md5.h>
 
+#define FREQ_24GHZ 1
+#define FREQ_5GHZ 2
+
 #define MAGIC_24GHZ 0xff8d8f20
 #define MAGIC_5GHZ 0xffd9da60
 #define MAGIC0 0xb21642c9ll
@@ -152,12 +155,12 @@ int main(int argc, char *argv[])
 	for (buf[3] = 0; buf[3] <= MAX3; buf[3]++) {
 		mode = 0;
 		if (upc_generate_ssid(buf, MAGIC_24GHZ) == target) {
-			mode = 1;
+			mode = FREQ_24GHZ;
 		}
 		if (upc_generate_ssid(buf, MAGIC_5GHZ) == target) {
-			mode = 2;
+			mode = FREQ_5GHZ;
 		}
-		if (mode != 1 && mode != 2) {
+		if (mode != FREQ_24GHZ && mode != FREQ_5GHZ) {
 			continue;
 		}
 
@@ -167,7 +170,7 @@ int main(int argc, char *argv[])
 			sprintf(serial, "%s%d%02d%d%04d", prefix, buf[0], buf[1], buf[2], buf[3]);
 			memset(serial_input, 0, 64);
 
-			if (mode == 2) {
+			if (mode == FREQ_5GHZ) {
 				for(i=0; i<strlen(serial); i++) {
 					serial_input[strlen(serial)-1-i] = serial[i];
 				}
